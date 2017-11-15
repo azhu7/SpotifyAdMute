@@ -3,3 +3,7 @@
 ################################################################################
 
 /.tmp
+/build/SpotifyAdMute
+/dist
+/.cache-pungun1234
+/SpotifyAdMute.spec
