@@ -139,6 +139,10 @@ class App(object):
         self.master.wait_window(popup.top)
         return popup.value
 
+    def stop_ad_mute(self):
+        if self.run_thread:
+            self.run_thread.shutdown_flag.set()
+
     # Prints some nice intro text
     def _print_intro(self, first_name):
         print('##############################################################')

@@ -51,6 +51,7 @@ class SpotifyAdMute(object):
     state = None
     current_track = None
     cv = threading.Condition()
+    quit = False
 
     # Initialize modules
     def __init__(self, app, username):
@@ -135,10 +136,11 @@ class SpotifyAdMute(object):
                 while not done:
                     if response:
                         done = True
-                        print('Got good response')
                     else:
                         print('Thanks for using Spotify Ad Mute!')
-                        sys.exit()
+                        self.app.stop_ad_mute()
+                        self.quit = True
+                        return results
 
         return results
 
@@ -167,6 +169,11 @@ class SpotifyAdMute(object):
     # Run main loop that adjusts volume based on current track.
     def poll(self):
         results = self._get_currently_playing()
+
+        if self.quit:
+            print("Exiting poll", file=sys.stderr)
+            self.quit = False
+            return
 
         if not results or not results['is_playing']:
             # Paused state
