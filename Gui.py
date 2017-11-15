@@ -13,54 +13,41 @@ exit_success = False
 ''' TODO
 Make output text read-only
 Init logger in App, pass into spotify ad mute, which passes into utility
-Fix quit join thing
+Change text output format to %
 '''
+
+# Center tkinter window on screen
+def center(root, height, width):
+    # Get screen width and height
+    ws = root.winfo_screenwidth()
+    hs = root.winfo_screenheight()
+
+    # Calculate x and y coordinates for the Tk root window
+    x = (ws/2) - (width/2)
+    y = (hs/2) - (height/2)
+
+    # Set the dimensions of the screen and where it is placed
+    root.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 class EntryWindow(object):
     value = None
 
     def __init__(self, master, title, message):
         self.top = Toplevel(master, pady=20)
+        center(self.top, 370, 600)
         self.top.title(title)
-
-        self.message = Label(self.top, text=message, wraplength=510, padx=20, font=("Trebuchet MS", 12))
-        self.message.pack()
+        
+        # Initialize widgets
+        self.message = Label(self.top, text=message, width=60, wraplength=510, padx=20, font=("Trebuchet MS", 12))
+        self.message.grid(row=0, column=0)
         self.entry = Entry(self.top, width=40)
-        self.entry.pack()
+        self.entry.grid(row=1, column=0)
         self.submit = Button(self.top, text='Submit', command=self._cleanup)
-        self.submit.pack()
+        self.submit.grid(row=2, column=0)
 
-        self.top.geometry("+{0}+{1}".format(500, 400))
-    
     def _cleanup(self):
         self.value = self.entry.get()
         self.top.destroy()
-
-'''class AskWindow(object):
-    value = None
-
-    def __init__(self, master, title, message):
-        self.top = Toplevel(master)
-        self.top.title(title)
-        print('Asking', file=sys.stderr)
-
-        self.message = Label(self.top, text=message, wraplength=520, padx=20, pady=20, font=("Trebuchet MS", 12))
-        self.message.grid(row=0, column=0, columnspan=2)
-        self.yes_button = Button(self.top, text="Yes", width=10, bg="green", command=self._yes)
-        self.yes_button.grid(row=1, column=0, sticky=E, padx=10, pady=20)
-        self.no_button = Button(self.top, text='No', width=10, bg="red", command=self._no)
-        self.no_button.grid(row=1, column=1, sticky=W, padx=10, pady=20)
-
-        self.top.geometry("+{0}+{1}".format(500, 400))
-
-    def _yes(self):
-        self.value = True
-        self.top.destroy()
-
-    def _no(self):
-        self.value = False
-        self.top.destroy()
-        '''
 
 class Job(threading.Thread):
     def __init__(self, target):
@@ -69,7 +56,7 @@ class Job(threading.Thread):
         self.shutdown_flag = threading.Event()
 
     def run(self):
-        print('Thread {0} started.'.format(self.ident), file=sys.stderr)
+        print('Thread %d started.' % (self.ident), file=sys.stderr)
         while not self.shutdown_flag.is_set():
             print('Thread {0} start run'.format(self.ident), file=sys.stderr)
             self.target()
@@ -85,8 +72,8 @@ class App(object):
         self.master = master
         self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
         self.master.title("Spotify Ad Mute")
-        self.master.geometry('500x500+500+300')
 
+        # Initialize widgets
         self.frame = Frame(self.master)
         self.frame.pack()
 
@@ -102,7 +89,6 @@ class App(object):
 
         self.text = Text(self.master, width=65, height=50)
         self.text.pack()
-        
         sys.stdout = StdRedirector(self.text)
 
     def _cleanup(self):
@@ -167,6 +153,7 @@ class StdRedirector(object):
 # Run the app
 if __name__ == '__main__':
     root = Tk()
+    center(root, 500, 500)
     app = App(root)
     root.mainloop()
     sys.exit(0)
