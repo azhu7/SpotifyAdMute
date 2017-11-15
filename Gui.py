@@ -36,7 +36,7 @@ class EntryWindow(object):
         self.value = self.entry.get()
         self.top.destroy()
 
-class AskWindow(object):
+'''class AskWindow(object):
     value = None
 
     def __init__(self, master, title, message):
@@ -60,7 +60,7 @@ class AskWindow(object):
     def _no(self):
         self.value = False
         self.top.destroy()
-        
+        '''
 
 class Job(threading.Thread):
     def __init__(self, target):
@@ -83,6 +83,7 @@ class App(object):
 
     def __init__(self, master):
         self.master = master
+        self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
         self.master.title("Spotify Ad Mute")
         self.master.geometry('500x500+500+300')
 
@@ -96,7 +97,7 @@ class App(object):
         self.username_input.pack()
         self.username_input.insert(0, 'pungun1234')
 
-        self.login_button = Button(self.frame, text='Log In', command=self.login)
+        self.login_button = Button(self.frame, text='Log In', command=self._login)
         self.login_button.pack(side=LEFT);
 
         self.text = Text(self.master, width=65, height=50)
@@ -105,20 +106,19 @@ class App(object):
         sys.stdout = StdRedirector(self.text)
 
     def _cleanup(self):
-        exit_thread = True
-        exit_success = True
-        print('Thanks for using Spotify Ad Mute!')
-        if self.run_thread:
-            print('a', file=sys.stderr)
-            self.run_thread.shutdown_flag.set()
-            print('b', file=sys.stderr)
-            self.spotifyAdMute.stop_poll()
-            print('c', file=sys.stderr)
-            self.run_thread.join()
+        if tkinter.messagebox.askyesno("Exit", "Are you sure you want to quit the application?"):
+            exit_thread = True
+            exit_success = True
+            print('Thanks for using Spotify Ad Mute!')
+            if self.run_thread:
+                self.run_thread.shutdown_flag.set()
+                self.spotifyAdMute.stop_poll()
+                self.run_thread.join()
 
-        self.frame.quit()
+            self.frame.quit()
+            self.master.destroy()
 
-    def login(self):
+    def _login(self):
         try:
             username = self.username_input.get()
             self.spotifyAdMute = SpotifyAdMute(self, username)
@@ -133,15 +133,14 @@ class App(object):
         self.master.wait_window(popup.top)
         return popup.value
 
-    def ask_user(self, title, message):
-        print('Making ask window', file=sys.stderr)
-        popup = AskWindow(self.master, title, message)
-        self.master.wait_window(popup.top)
-        return popup.value
+    def ask_user_yesno(self, title, message):
+        return tkinter.messagebox.askyesno(title, message)
 
     def stop_ad_mute(self):
         if self.run_thread:
             self.run_thread.shutdown_flag.set()
+
+        print('Stopped.')
 
     # Prints some nice intro text
     def _print_intro(self, first_name):
@@ -170,5 +169,4 @@ if __name__ == '__main__':
     root = Tk()
     app = App(root)
     root.mainloop()
-    root.destroy()
     sys.exit(0)

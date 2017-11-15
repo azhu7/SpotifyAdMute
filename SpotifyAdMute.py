@@ -131,13 +131,12 @@ class SpotifyAdMute(object):
             results, success = self._try_get_currently_playing()
             if not success:
                 self.logger.error('SpotifyAdMute: Could not poll for currently playing track information. Waiting for user input.')
-                response = self.app.ask_user('Error', 'Could not poll for currently playing track information. Check {0} for more info.\nTry again?'.format(self.logger.handlers[0].baseFilename))
+                response = self.app.ask_user_yesno('Error', 'Could not poll for currently playing track information. Check {0} for more info.\n\n\tTry again?'.format(self.logger.handlers[0].baseFilename))
                 done = False
                 while not done:
                     if response:
                         done = True
                     else:
-                        print('Thanks for using Spotify Ad Mute!')
                         self.app.stop_ad_mute()
                         self.quit = True
                         return results
