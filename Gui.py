@@ -23,7 +23,6 @@ class EntryWindow(object):
         self.top = Toplevel(master, pady=20)
         self.top.title(title)
 
-        #self.top.geometry("300x150+600+450")
         self.message = Label(self.top, text=message, wraplength=510, padx=20, font=("Trebuchet MS", 12))
         self.message.pack()
         self.entry = Entry(self.top, width=40)
@@ -38,12 +37,29 @@ class EntryWindow(object):
         self.top.destroy()
 
 class AskWindow(object):
+    value = None
+
     def __init__(self, master, title, message):
         self.top = Toplevel(master)
         self.top.title(title)
         print('Asking', file=sys.stderr)
-        tkinter.messagebox.showinfo("Hello!")
-        #self.result = tkinter.messagebox.askyesno(title, message)
+
+        self.message = Label(self.top, text=message, wraplength=520, padx=20, pady=20, font=("Trebuchet MS", 12))
+        self.message.grid(row=0, column=0, columnspan=2)
+        self.yes_button = Button(self.top, text="Yes", width=10, bg="green", command=self._yes)
+        self.yes_button.grid(row=1, column=0, sticky=E, padx=10, pady=20)
+        self.no_button = Button(self.top, text='No', width=10, bg="red", command=self._no)
+        self.no_button.grid(row=1, column=1, sticky=W, padx=10, pady=20)
+
+        self.top.geometry("+{0}+{1}".format(500, 400))
+
+    def _yes(self):
+        self.value = True
+        self.top.destroy()
+
+    def _no(self):
+        self.value = False
+        self.top.destroy()
         
 
 class Job(threading.Thread):

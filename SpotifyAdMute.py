@@ -135,6 +135,7 @@ class SpotifyAdMute(object):
                 while not done:
                     if response:
                         done = True
+                        print('Got good response')
                     else:
                         print('Thanks for using Spotify Ad Mute!')
                         sys.exit()
