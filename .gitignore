@@ -2,8 +2,10 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/.tmp
-/build/SpotifyAdMute
-/dist
-/.cache-pungun1234
-/SpotifyAdMute.spec
+/build
+/.cache-*
+/build
+/__pycache__
+*.spec
+*.pyc
+**/.tmp
