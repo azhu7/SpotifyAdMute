@@ -9,3 +9,5 @@
 *.spec
 *.pyc
 **/.tmp
+*.egg-info/
+**/*.egg
