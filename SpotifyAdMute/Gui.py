@@ -3,6 +3,8 @@ from __future__ import print_function
 import sys
 import os
 import threading
+import logging
+import time
 from tkinter import *
 import tkinter.messagebox
 from SpotifyAdMute import SpotifyAdMute, SpotifyAdMuteException
@@ -13,7 +15,7 @@ exit_success = False
 ''' TODO
 Init logger in App, pass into spotify ad mute, which passes into utility
 Change text output format to %
-Don't actually need spotify username???
+Enter username, press enter to log in
 '''
 
 # Center tkinter window on screen
@@ -67,6 +69,8 @@ class App(object):
     username = None
 
     def __init__(self, master):
+        self._init_logger()
+
         self.master = master
         self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
         self.master.title("Spotify Ad Mute")
@@ -115,10 +119,25 @@ class App(object):
             self.frame.quit()
             self.master.destroy()
 
+    # Initialize logger
+    def _init_logger(self):
+        self.logger = logging.getLogger('SpotifyAdMute')
+        current_time = time.strftime('%Y_%m_%d_%H_%M_%S', time.gmtime())
+        log_folder = os.path.dirname(os.path.realpath(__file__)) + '/.tmp'
+        if not os.path.exists(log_folder):
+            os.makedirs(log_folder)
+
+        hdlr = logging.FileHandler('%s/%s.log' % (log_folder, current_time))
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        hdlr.setFormatter(formatter)
+        self.logger.addHandler(hdlr)
+        self.logger.setLevel(logging.INFO)
+        self.logger.info('Gui: Initialized logger.')
+
     def _login(self):
         try:
             self.username = self.username_input.get()
-            self.spotify_ad_mute = SpotifyAdMute(self)
+            self.spotify_ad_mute = SpotifyAdMute(self, self.logger)
             self.spotify_ad_mute.login(self.username)
             self._print_intro(self.spotify_ad_mute.first_name)
             

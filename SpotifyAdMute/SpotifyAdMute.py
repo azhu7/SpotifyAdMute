@@ -7,8 +7,8 @@ Description:   A simple Spotify listener that mutes during ads and unmutes durin
 from __future__ import print_function
 import sys
 import os
-import logging
 import time
+import logging
 import threading
 
 # Spotify API
@@ -55,27 +55,12 @@ class SpotifyAdMute(object):
     quit = False
 
     # Initialize modules
-    def __init__(self, app):
+    def __init__(self, app, logger):
         self.app = app
-        self._init_logger()
+        self.logger = logger
         self._init_volume()
 
         self.logger.info('SpotifyAdMute: Successful initialization.')
-
-    # Initialize logger
-    def _init_logger(self):
-        self.logger = logging.getLogger('SpotifyAdMute')
-        current_time = time.strftime('%Y_%m_%d_%H_%M_%S', time.gmtime())
-        log_folder = os.path.dirname(os.path.realpath(__file__)) + '/.tmp'
-        if not os.path.exists(log_folder):
-            os.makedirs(log_folder)
-
-        hdlr = logging.FileHandler('{0}/{1}.log'.format(log_folder, current_time))
-        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-        hdlr.setFormatter(formatter)
-        self.logger.addHandler(hdlr)
-        self.logger.setLevel(logging.INFO)
-        self.logger.info('SpotifyAdMute: Initialized logger.')
         
     # Initialize Spotify
     def _init_spotify(self):
@@ -83,17 +68,23 @@ class SpotifyAdMute(object):
         client_id = '56bfb83b714a4c708faef8e06bf7abcb'
         client_secret = '38b7264e4ea04523a7092a01d26081f8'
         redirect_uri = 'http://google.com'
+        cache_path = '.cache-%s' % self.username
         
         try:
-            token = Utility.get_user_token(self.app, self.username, scope, client_id, client_secret, redirect_uri)
+            token = Utility.get_user_token(self.app, self.username, scope, client_id, client_secret, redirect_uri, cache_path)
         except spotipy.oauth2.SpotifyOauthError as err:
-            self.logger.error('SpotifyAdMute: While initializing Spotify, got exception: {0}'.format(str(err)))
-            raise SpotifyAdMuteException('Could not verify username: {0}. Make sure you enter the same username as that of the logged-in account.'.format(self.username))
+            self.logger.error('SpotifyAdMute: While initializing Spotify, got exception: %s' % str(err))
+            raise SpotifyAdMuteException('Error retrieving token for: %s' % self.username)
         
         if not token:
-            raise SpotifyAdMuteException('Can\'t get token for ' + self.username)
+            self.logger.error('SpotifyAdMute: Got token <None> for %s' % self.username)
+            raise SpotifyAdMuteException('Could not get token for %s' % self.username)
 
         self.spotify = spotipy.Spotify(auth=token)
+        if self.spotify.current_user()['id'] != self.username:
+            os.remove(cache_path)  # Remove the mismatched token
+            raise SpotifyAdMuteException('Could not verify username: %s. Make sure you enter the same username as that of the logged-in account.' % self.username)
+
         self.logger.info('SpotifyAdMute: Initialized Spotify.')
 
     # Initialize volume
@@ -114,7 +105,7 @@ class SpotifyAdMute(object):
             except spotipy.client.SpotifyException as err:
                 retry_attempts -= 1
                 init_spotify(self.username)
-                self.logger.error('SpotifyAdMute: While polling for currently playing track information, got exception {0}'.format(str(err)))
+                self.logger.error('SpotifyAdMute: While polling for currently playing track information, got exception %s' % str(err))
             except:
                 retry_attempts -= 1
                 self.logger.error('SpotifyAdMute: While polling for currently playing track information, got unexpected exception!')
@@ -128,7 +119,7 @@ class SpotifyAdMute(object):
             results, success = self._try_get_currently_playing()
             if not success:
                 self.logger.error('SpotifyAdMute: Could not poll for currently playing track information. Waiting for user input.')
-                response = self.app.ask_user_yesno('Error', 'Could not poll for currently playing track information. Check {0} for more info.\n\n\tTry again?'.format(self.logger.handlers[0].baseFilename))
+                response = self.app.ask_user_yesno('Error', 'Could not poll for currently playing track information. Check %s for more info.\n\n\tTry again?' % self.logger.handlers[0].baseFilename)
                 done = False
                 while not done:
                     if response:
@@ -142,7 +133,7 @@ class SpotifyAdMute(object):
 
     # Print track information.
     def _print_track(self, item):
-        return '"{0}" by {1}'.format(item['name'], item['artists'][0]['name'])
+        return '"%s" by %s' % (item['name'], item['artists'][0]['name'])
 
     # Compute remaining time.
     def _get_sleep_duration(self, results):
@@ -160,7 +151,7 @@ class SpotifyAdMute(object):
             self.volume.SetMute(mute, None)
         except _ctypes.COMError as err:
             self.logger.error('SpotifyAdMute: While setting mute, got exception: ' + err)
-            raise SpotifyAdMuteException('SpotifyAdMute: Got an unexpected error. Check {0} for more info.'.format(self.logger.handlers[0].baseFilename))
+            raise SpotifyAdMuteException('SpotifyAdMute: Got an unexpected error. Check %s for more info.' % self.logger.handlers[0].baseFilename)
 
     # Run main loop that adjusts volume based on current track.
     def poll(self):
@@ -188,9 +179,9 @@ class SpotifyAdMute(object):
             if self.current_track != results['item']['name'] or self.state != self.State.Music:
                 self.state = self.State.Music
                 self.current_track = results['item']['name']
-                message = 'Currently playing {0}'.format(self._print_track(results['item']))
+                message = 'Currently playing %s' % self._print_track(results['item'])
                 print(message)
-                self.logger.info('SpotifyAdMute: {0}'.format(message))
+                self.logger.info('SpotifyAdMute: %s' % message)
         elif not results['item']:
             # Ad state
             self._protected_set_mute(1)
@@ -198,7 +189,7 @@ class SpotifyAdMute(object):
                 self.state = self.State.Ad
                 message = 'Playing ad. Muting!'
                 print(message)
-                self.logger.info('SpotifyAdMute: {0}'.format(message))
+                self.logger.info('SpotifyAdMute: %s' % message)
 
         # Sleep until timeout or wakeup from a call to stop_poll()
         duration = self._get_sleep_duration(results)

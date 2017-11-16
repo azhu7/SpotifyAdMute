@@ -2,7 +2,7 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/build
+**/build
 **/.cache-*
 /build
 /__pycache__
@@ -11,3 +11,5 @@
 **/.tmp
 *.egg-info/
 **/*.egg
+**.vs/
+make.bat

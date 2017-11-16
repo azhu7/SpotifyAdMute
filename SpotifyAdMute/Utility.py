@@ -1,8 +1,7 @@
 import os
 import spotipy.oauth2 as oauth2
 
-def get_user_token(app, username, scope, client_id, client_secret, redirect_uri):
-    cache_path = ".cache-" + username
+def get_user_token(app, username, scope, client_id, client_secret, redirect_uri, cache_path):
     sp_oauth = oauth2.SpotifyOAuth(client_id, client_secret, redirect_uri, scope=scope, cache_path=cache_path)
 
     token_info = sp_oauth.get_cached_token()
