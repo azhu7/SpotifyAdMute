@@ -31,7 +31,7 @@ def center(root):
     y = (hs/2) - (h/2)
 
     # Set the dimensions of the screen and where it is placed
-    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+    root.geometry('+%d+%d' % (x, y))
 
 class EntryWindow(object):
     value = None
@@ -48,6 +48,7 @@ class EntryWindow(object):
         self.submit = Button(self.top, text='Submit', command=self._cleanup)
         self.submit.grid(row=2, column=0)
 
+        center(self.top)
         self.top.update()
         center(self.top)
 
@@ -115,6 +116,7 @@ class App(object):
         self.text_scroll.grid(row=2, column=2, sticky=NSEW)
         self.text.config(yscrollcommand=self.text_scroll.set)
 
+        center(self.master)
         self.master.update()
         center(self.master)
 
