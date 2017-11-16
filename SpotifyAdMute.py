@@ -30,9 +30,10 @@ class SpotifyAdMuteException(Exception):
 class SpotifyAdMute(object):
     '''
         Example usage:
+            root = Tk()
             username = 'ryan wu'
-            spotifyAdMute = SpotifyAdMute(username)
-            spotifyAdMute.run()
+            spotifyAdMute = SpotifyAdMute(root)
+            spotifyAdMute.log_in(username)
     '''
 
     # Spotify playback states
@@ -54,14 +55,10 @@ class SpotifyAdMute(object):
     quit = False
 
     # Initialize modules
-    def __init__(self, app, username):
+    def __init__(self, app):
         self.app = app
-        self.username = username
         self._init_logger()
-        self._init_spotify()
         self._init_volume()
-
-        self.first_name = self.spotify.current_user()['display_name'].split()[0]
 
         self.logger.info('SpotifyAdMute: Successful initialization.')
 
@@ -163,17 +160,22 @@ class SpotifyAdMute(object):
             self.volume.SetMute(mute, None)
         except _ctypes.COMError as err:
             self.logger.error('SpotifyAdMute: While setting mute, got exception: ' + err)
-            raise SpotifyAdMuteException('Got an unexpected error. Check {0} for more info.'.format(self.logger.handlers[0].baseFilename))
+            raise SpotifyAdMuteException('SpotifyAdMute: Got an unexpected error. Check {0} for more info.'.format(self.logger.handlers[0].baseFilename))
 
     # Run main loop that adjusts volume based on current track.
     def poll(self):
+        if not self.spotify:
+            raise SpotifyAdMuteException('SpotifyAdMute: Cannot poll because not logged in!')
+
         results = self._get_currently_playing()
 
+        # Quit if user chose to quit during _get_currently_playing()
         if self.quit:
-            print("Exiting poll", file=sys.stderr)
+            self.logger.info('SpotifyAdMute: Exiting poll')
             self.quit = False
             return
 
+        # Process results
         if not results or not results['is_playing']:
             # Paused state
             if self.state != self.State.Paused:
@@ -198,6 +200,7 @@ class SpotifyAdMute(object):
                 print(message)
                 self.logger.info('SpotifyAdMute: {0}'.format(message))
 
+        # Sleep until timeout or wakeup from a call to stop_poll()
         duration = self._get_sleep_duration(results)
         self.cv.acquire()
         self.cv.wait(timeout=duration)
@@ -207,3 +210,21 @@ class SpotifyAdMute(object):
         self.cv.acquire()
         self.cv.notify()
         self.cv.release()
+
+    def clear_cache(self):
+        self.state = None
+        self.current_track = None
+
+    # Log in with username
+    def login(self, username):
+        self.username = username
+        self._init_spotify()
+        self.first_name = self.spotify.current_user()['display_name'].split()[0]
+        self.logger.info('SpotifyAdMute: Successfully logged in as %s' % self.username)
+
+    # Log out
+    def logout(self):
+        self.logger.info('SpotifyAdMute: Successfully logged out from %s' % self.username)
+        self.username = None
+        self.first_name = None
+        self.spotify = None

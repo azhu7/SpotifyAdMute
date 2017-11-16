@@ -58,15 +58,13 @@ class Job(threading.Thread):
     def run(self):
         print('Thread %d started.' % (self.ident), file=sys.stderr)
         while not self.shutdown_flag.is_set():
-            print('Thread {0} start run'.format(self.ident), file=sys.stderr)
             self.target()
-            print('Thread {0} stop run'.format(self.ident), file=sys.stderr)
  
-        # ... Clean shutdown code here ...
         print('Thread {0} stopped.'.format(self.ident), file=sys.stderr)
 
 class App(object):
     run_thread = None
+    username = ""
 
     def __init__(self, master):
         self.master = master
@@ -75,21 +73,34 @@ class App(object):
 
         # Initialize widgets
         self.frame = Frame(self.master)
-        self.frame.pack()
+        self.frame.pack(fill='both', expand=True)
 
-        self.quit_button = Button(self.frame, text='QUIT', fg='red', command=self._cleanup)
-        self.quit_button.pack(side=LEFT)
+        self.username_label = Label(self.frame, text="Spotify Username:", font=('Trebuchet MS', 11))
+        self.username_label.grid(row=0, column=0, sticky=E, padx=10, pady=10)
 
-        self.username_input = Entry(self.master)
-        self.username_input.pack()
+        self.username_input = Entry(self.frame, font=('Trebuchet MS', 11))
+        self.username_input.grid(row=0, column=1, sticky=W)
         self.username_input.insert(0, 'pungun1234')
 
-        self.login_button = Button(self.frame, text='Log In', command=self._login)
-        self.login_button.pack(side=LEFT);
+        self.username_logged_in = Label(self.frame, font=('Trebuchet MS', 11))
+        self.username_logged_in.grid(row=0, columnspan=2, pady=10)
+        self.username_logged_in.grid_remove()  # Hide the text until logged in
 
-        self.text = Text(self.master, width=65, height=50)
-        self.text.pack()
+        self.login_button = Button(self.frame, text='Log In', command=self._login, font=('Trebuchet MS', 11))
+        self.login_button.grid(row=0, column=1, sticky=E)
+
+        self.start_button = Button(self.frame, text='Start', command=self._start_ad_mute, font=('Trebuchet MS', 11))
+        self.start_button.grid(row=1, columnspan=3)
+        self.start_button.grid_remove()  # Hide the button until logged in
+        self.frame.grid_rowconfigure(1, minsize=35)
+
+        self.text = Text(self.frame, borderwidth=3, relief='sunken', width=55, height=20, font=('Trebuchet MS', 11), wrap='word', state='disabled')
+        self.text.grid(row=2, columnspan=2, sticky=NSEW, padx=2, pady=2)
         sys.stdout = StdRedirector(self.text)
+
+        self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
+        self.text_scroll.grid(row=2, column=2, sticky=NSEW)
+        self.text.config(yscrollcommand=self.text_scroll.set)
 
     def _cleanup(self):
         if tkinter.messagebox.askyesno("Exit", "Are you sure you want to quit the application?"):
@@ -98,7 +109,7 @@ class App(object):
             print('Thanks for using Spotify Ad Mute!')
             if self.run_thread:
                 self.run_thread.shutdown_flag.set()
-                self.spotifyAdMute.stop_poll()
+                self.spotify_ad_mute.stop_poll()
                 self.run_thread.join()
 
             self.frame.quit()
@@ -106,11 +117,41 @@ class App(object):
 
     def _login(self):
         try:
-            username = self.username_input.get()
-            self.spotifyAdMute = SpotifyAdMute(self, username)
-            self._print_intro(self.spotifyAdMute.first_name)
-            self.run_thread = Job(target=self.spotifyAdMute.poll)
+            self.username = self.username_input.get()
+            self.spotify_ad_mute = SpotifyAdMute(self)
+            self.spotify_ad_mute.login(self.username)
+            self._print_intro(self.spotify_ad_mute.first_name)
+            
+            # Transition to logged-in widgets
+            self.username_label.grid_remove()
+            self.username_input.grid_remove()
+            self.username_logged_in.config(text="Logged in as %s" % self.username)
+            self.username_logged_in.grid()
+            self.login_button.config(text="Log Out", command=self._logout)
+            self.start_button.grid()
+            self._start_ad_mute()
+        except SpotifyAdMuteException as err:
+            print('Got exception: {0}'.format(str(err)))
+
+    def _logout(self):
+        self.stop_ad_mute()
+
+        # Transition to logged-out widgets
+        self.username_logged_in.grid_remove()
+        self.start_button.grid_remove()
+        self.username_label.grid()
+        self.username_input.grid()
+        self.login_button.config(text="Log In", command=self._login)
+        self.spotify_ad_mute.logout()
+        print('Logged out.')
+
+    def _start_ad_mute(self):
+        try:
+            print('Started.')
+            self.run_thread = Job(target=self.spotify_ad_mute.poll)
             self.run_thread.start()
+
+            self.start_button.config(text='Stop', command=self.stop_ad_mute)
         except SpotifyAdMuteException as err:
             print('Got exception: {0}'.format(str(err)))
 
@@ -125,19 +166,22 @@ class App(object):
     def stop_ad_mute(self):
         if self.run_thread:
             self.run_thread.shutdown_flag.set()
+            self.spotify_ad_mute.stop_poll()
+            self.spotify_ad_mute.clear_cache()
 
+        self.start_button.config(text='Start', command=self._start_ad_mute)
         print('Stopped.')
 
     # Prints some nice intro text
     def _print_intro(self, first_name):
-        print('##############################################################')
+        print('#######################################################')
         print('')
         print('\tWelcome to Spotify Ad Mute, {0}!'.format(first_name))
         print('')
         print('\tThe app will monitor your Spotify playback and ')
         print('\tadjust the volume accordingly.')
         print('')
-        print('##############################################################')
+        print('#######################################################')
         print('')
 
 class StdRedirector(object):
@@ -145,8 +189,10 @@ class StdRedirector(object):
         self.widget = widget
     def write(self, string):
         if not exit_thread:
+            self.widget.configure(state='normal')
             self.widget.insert(END,string)
             self.widget.see(END)
+            self.widget.configure(state='disabled')
     def flush(self):
         pass
 
