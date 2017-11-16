@@ -13,6 +13,7 @@ exit_success = False
 ''' TODO
 Init logger in App, pass into spotify ad mute, which passes into utility
 Change text output format to %
+Don't actually need spotify username???
 '''
 
 # Center tkinter window on screen
@@ -63,7 +64,7 @@ class Job(threading.Thread):
 
 class App(object):
     run_thread = None
-    username = ""
+    username = None
 
     def __init__(self, master):
         self.master = master
@@ -79,7 +80,7 @@ class App(object):
 
         self.username_input = Entry(self.frame, font=('Trebuchet MS', 11))
         self.username_input.grid(row=0, column=1, sticky=W)
-        self.username_input.insert(0, 'pungun1234')
+        #self.username_input.insert(0, 'pungun1234')
 
         self.username_logged_in = Label(self.frame, font=('Trebuchet MS', 11))
         self.username_logged_in.grid(row=0, columnspan=2, pady=10)
@@ -130,7 +131,7 @@ class App(object):
             self.start_button.grid()
             self._start_ad_mute()
         except SpotifyAdMuteException as err:
-            print('Got exception: {0}'.format(str(err)))
+            tkinter.messagebox.showerror(title="Error", message=err)
 
     def _logout(self):
         self.stop_ad_mute()
@@ -145,14 +146,10 @@ class App(object):
         print('Logged out.')
 
     def _start_ad_mute(self):
-        try:
-            print('Started.')
-            self.run_thread = Job(target=self.spotify_ad_mute.poll)
-            self.run_thread.start()
-
-            self.start_button.config(text='Stop', command=self.stop_ad_mute)
-        except SpotifyAdMuteException as err:
-            print('Got exception: {0}'.format(str(err)))
+        print('Started.')
+        self.run_thread = Job(target=self.spotify_ad_mute.poll)
+        self.run_thread.start()
+        self.start_button.config(text='Stop', command=self.stop_ad_mute)
 
     def prompt_user(self, title, message):
         popup = EntryWindow(self.master, title, message)
@@ -200,5 +197,7 @@ if __name__ == '__main__':
     root = Tk()
     center(root, 500, 500)
     app = App(root)
-    root.mainloop()
-    sys.exit(0)
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        app._cleanup()
