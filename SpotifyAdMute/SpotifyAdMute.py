@@ -71,7 +71,7 @@ class SpotifyAdMute(object):
         cache_path = '.cache-%s' % self.username
         
         try:
-            token = Utility.get_user_token(self.app, self.username, scope, client_id, client_secret, redirect_uri, cache_path)
+            token = Utility.get_user_token(self.logger, self.app, self.username, scope, client_id, client_secret, redirect_uri, cache_path)
         except spotipy.oauth2.SpotifyOauthError as err:
             self.logger.error('SpotifyAdMute: While initializing Spotify, got exception: %s' % str(err))
             raise SpotifyAdMuteException('Error retrieving token for: %s' % self.username)

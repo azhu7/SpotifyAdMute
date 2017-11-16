@@ -14,30 +14,30 @@ exit_thread = False
 exit_success = False
 
 ''' TODO
-Init logger in App, pass into spotify ad mute, which passes into utility
 Enter username, press enter to log in
 computer sleep crash program?
 '''
 
 # Center tkinter window on screen
-def center(root, height, width):
+def center(root):
     # Get screen width and height
+    w = root.winfo_width()
+    h = root.winfo_height()
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
 
     # Calculate x and y coordinates for the Tk root window
-    x = (ws/2) - (width/2)
-    y = (hs/2) - (height/2)
+    x = (ws/2) - (w/2)
+    y = (hs/2) - (h/2)
 
     # Set the dimensions of the screen and where it is placed
-    root.geometry('%dx%d+%d+%d' % (width, height, x, y))
+    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 
 class EntryWindow(object):
     value = None
 
     def __init__(self, master, title, message):
         self.top = Toplevel(master, pady=20)
-        center(self.top, 370, 600)
         self.top.title(title)
         
         # Initialize widgets
@@ -48,23 +48,26 @@ class EntryWindow(object):
         self.submit = Button(self.top, text='Submit', command=self._cleanup)
         self.submit.grid(row=2, column=0)
 
+        self.top.update()
+        center(self.top)
+
     def _cleanup(self):
         self.value = self.entry.get()
         self.top.destroy()
 
 class Job(threading.Thread):
-    def __init__(self, target, logger):
+    def __init__(self, logger, target):
         threading.Thread.__init__(self)
         self.target = target
         self.logger = logger
         self.shutdown_flag = threading.Event()
 
     def run(self):
-        logger.info('Job: Thread %d started.' % self.ident)
+        self.logger.info('Job: Thread %d started.' % self.ident)
         while not self.shutdown_flag.is_set():
             self.target()
  
-        logger.info('Job: Thread %d stopped.' % self.ident)
+        self.logger.info('Job: Thread %d stopped.' % self.ident)
 
 class App(object):
     run_thread = None
@@ -111,6 +114,9 @@ class App(object):
         self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
         self.text_scroll.grid(row=2, column=2, sticky=NSEW)
         self.text.config(yscrollcommand=self.text_scroll.set)
+
+        self.master.update()
+        center(self.master)
 
         self.logger.info('Gui: Successfully initialized all widgets.')
 
@@ -198,12 +204,12 @@ class App(object):
     # Start polling.
     def _start_ad_mute(self):
         # Start a new thread to poll
-        self.run_thread = Job(target=self.spotify_ad_mute.poll)
+        self.run_thread = Job(self.logger, self.spotify_ad_mute.poll)
         self.run_thread.start()
 
-        self.start_button.config(text='Stop', command=self.stop_ad_mute)
+        self.start_button.config(text='Stop Listening', command=self.stop_ad_mute)
 
-        print('Started.')
+        print('Started listening.')
         self.logger.info('Gui: Successfully started ad mute.')
 
     # Stop polling.
@@ -214,9 +220,9 @@ class App(object):
             self.spotify_ad_mute.stop_poll()
             self.spotify_ad_mute.clear_cache()
 
-        self.start_button.config(text='Start', command=self._start_ad_mute)
+        self.start_button.config(text='Start Listening', command=self._start_ad_mute)
 
-        print('Stopped.')
+        print('Stopped listening.')
         self.logger.info('Gui: Successfully stopped ad mute.')
 
     # Prints some nice intro text
@@ -247,7 +253,6 @@ class StdRedirector(object):
 # Run the app.
 if __name__ == '__main__':
     root = Tk()
-    center(root, 500, 500)
     app = App(root)
 
     try:
