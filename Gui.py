@@ -11,7 +11,6 @@ exit_thread = False
 exit_success = False
 
 ''' TODO
-Make output text read-only
 Init logger in App, pass into spotify ad mute, which passes into utility
 Change text output format to %
 '''
@@ -179,7 +178,7 @@ class App(object):
         print('\tWelcome to Spotify Ad Mute, {0}!'.format(first_name))
         print('')
         print('\tThe app will monitor your Spotify playback and ')
-        print('\tadjust the volume accordingly.')
+        print('\tmute during ads.')
         print('')
         print('#######################################################')
         print('')
