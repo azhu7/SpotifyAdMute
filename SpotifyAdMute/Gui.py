@@ -90,6 +90,8 @@ class App(object):
         self._init_logger()
 
         self.master = master
+        hide(self.master)
+
         self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
         self.master.title('Spotify Ad Mute')
         default_font = tkinter.font.nametofont('TkDefaultFont')
@@ -101,34 +103,37 @@ class App(object):
         self.frame.pack(fill='both', expand=True)
 
         self.username_label = Label(self.frame, text='Spotify Username:')
-        self.username_label.grid(row=0, column=0, sticky=E, padx=10, pady=10)
+        self.username_label.grid(row=0, column=0, sticky=E, padx=(10, 5), pady=(10, 0))
 
         self.username_input = Entry(self.frame)
-        self.username_input.grid(row=0, column=1, sticky=W)
+        self.username_input.grid(row=0, column=1, sticky=W, pady=(10, 0))
         self.username_input.bind('<Return>', (lambda event: self._login()))
         self.username_input.insert(0, 'pungun1234')
 
-        self.username_logged_in = Label(self.frame)
-        self.username_logged_in.grid(row=0, columnspan=2, pady=10)
-        self.username_logged_in.grid_remove()  # Hide the text until logged in
+        self.username_logged_in_label = Label(self.frame)
+        self.username_logged_in_label.grid(row=0, columnspan=2, pady=(5, 0))
 
         self.login_button = Button(self.frame, text='Log In', command=self._login)
-        self.login_button.grid(row=0, column=1, sticky=E)
+        self.login_button.grid(row=0, column=2, sticky=E, padx=(20, 10), pady=(10, 0))
+
+        self.logout_button = Button(self.frame, text='Log Out', command=self._logout)
+        self.logout_button.grid(row=0, column=1, columnspan=2, sticky=E, padx=(0, 10), pady=(10, 0))
 
         self.start_button = Button(self.frame, text='Start Monitoring', command=self._start_ad_mute)
         self.start_button.grid(row=1, columnspan=3)
-        self.start_button.grid_remove()  # Hide the button until logged in
         self.frame.grid_rowconfigure(1, minsize=35)
 
         self.text = Text(self.frame, borderwidth=3, relief='sunken', width=55, height=20, wrap='word', state='disabled')
-        self.text.grid(row=2, columnspan=2, sticky=NSEW, padx=2, pady=2)
+        self.text.grid(row=2, columnspan=2, sticky=NSEW, padx=(5, 0), pady=5)
         sys.stdout = StdRedirector(self.text)
 
         self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
-        self.text_scroll.grid(row=2, column=2, sticky=NSEW)
+        self.text_scroll.grid(row=2, column=2, sticky=NSEW, pady=10)
         self.text.config(yscrollcommand=self.text_scroll.set)
 
-        hide(self.master)
+        # Start at login view
+        self._login_view()
+
         self.master.update()
         center(self.master)
 
@@ -189,15 +194,11 @@ class App(object):
 
             self.logger.info('Gui: Attempting to login with username: %s.' % self.username)
             self.spotify_ad_mute.login(self.username)
-            self._print_intro(self.spotify_ad_mute.first_name)
             
             # Transition to logged-in widgets
-            self.username_label.grid_remove()
-            self.username_input.grid_remove()
-            self.username_logged_in.config(text='Logged in as %s' % self.username)
-            self.username_logged_in.grid()
-            self.login_button.config(text='Log Out', command=self._logout)
-            self.start_button.grid()
+            self._running_view()
+
+            self._print_intro(self.spotify_ad_mute.first_name)
 
             # Start polling
             self._start_ad_mute()
@@ -212,13 +213,8 @@ class App(object):
         self.spotify_ad_mute.logout()
 
         # Transition to logged-out widgets
-        self.username_logged_in.grid_remove()
-        self.start_button.grid_remove()
-        self.username_label.grid()
-        self.username_input.grid()
-        self.login_button.config(text='Log In', command=self._login)
+        self._login_view()
 
-        print('Logged out.')
         self.logger.info('Gui: Successfully logged out.')
 
     # Create an entry window to get user input.
@@ -229,7 +225,6 @@ class App(object):
 
     # Ask the user a yes/no question.
     def ask_user_yesno(self, title, message):
-        print("hello")
         return tkinter.messagebox.askyesno(title, message)
 
     # Start polling.
@@ -255,6 +250,37 @@ class App(object):
 
         print('Stopped monitoring.')
         self.logger.info('Gui: Successfully stopped ad mute.')
+
+    def _login_view(self):
+        hide(self.master)
+        for child in self.frame.children.values():
+            child.grid_remove()
+
+        self.username_label.grid()
+        self.username_input.grid()
+        self.login_button.grid()
+        self.master.update()
+        center(self.master)
+
+    def _running_view(self):
+        hide(self.master)
+        for child in self.frame.children.values():
+            child.grid_remove()
+
+        self.username_logged_in_label.config(text='Logged in as %s' % self.username)
+        self.username_logged_in_label.grid()
+        self.logout_button.grid()
+        self.start_button.grid()
+
+        # Clear text before showing
+        self.text.configure(state='normal')
+        self.text.delete(1.0, END)
+        self.text.configure(state='disabled')
+        self.text.grid()
+        self.text_scroll.grid()
+
+        self.master.update()
+        center(self.master)
 
     # Prints some nice intro text
     def _print_intro(self, first_name):

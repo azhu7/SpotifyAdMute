@@ -8,6 +8,7 @@ from __future__ import print_function
 import sys
 import os
 import time
+import requests
 import logging
 import threading
 from queue import Queue
@@ -82,9 +83,15 @@ class SpotifyAdMute(object):
             raise SpotifyAdMuteException('Could not get token for %s' % self.username)
 
         self.spotify = spotipy.Spotify(auth=token)
-        if self.spotify.current_user()['id'] != self.username:
-            os.remove(cache_path)  # Remove the mismatched token
-            raise SpotifyAdMuteException('Could not verify username: %s. Make sure you enter the same username as that of the logged-in account.' % self.username)
+
+        try:
+            if self.spotify.current_user()['id'] != self.username:
+                os.remove(cache_path)  # Remove the mismatched token
+                raise SpotifyAdMuteException('Could not verify username: %s. Make sure you enter the same username as that of the logged-in account.' % self.username)
+        except requests.ConnectionError as err:
+            raise SpotifyAdMuteException('Failed to establish a connection to Spotify. Make sure you have wifi.')
+        except:
+            raise SpotifyAdMuteException('Got an unknown error while querying from Spotify')
 
         self.logger.info('SpotifyAdMute: Initialized Spotify.')
 
