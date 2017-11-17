@@ -9,14 +9,18 @@ from tkinter import *
 import tkinter.messagebox
 import tkinter.font
 from SpotifyAdMute import SpotifyAdMute, SpotifyAdMuteException
+from queue import Queue
 
 exit_thread = False
 exit_success = False
 
 ''' TODO
-Enter username, press enter to log in
 computer sleep crash program?
+file menu -> about, submit feedback
+to center, first bring offscreen, refresh, then center
+login screen
 '''
+
 
 # Center tkinter window on screen
 def center(root):
@@ -45,6 +49,7 @@ class EntryWindow(object):
         self.message.grid(row=0, column=0)
         self.entry = Entry(self.top, width=40)
         self.entry.grid(row=1, column=0)
+        self.entry.bind('<Return>', (lambda event: self._cleanup()))
         self.submit = Button(self.top, text='Submit', command=self._cleanup)
         self.submit.grid(row=2, column=0)
 
@@ -71,6 +76,8 @@ class Job(threading.Thread):
         self.logger.info('Job: Thread %d stopped.' % self.ident)
 
 class App(object):
+    requests = Queue()  # Let other threads create widgets
+
     run_thread = None
     username = None
 
@@ -94,7 +101,8 @@ class App(object):
 
         self.username_input = Entry(self.frame)
         self.username_input.grid(row=0, column=1, sticky=W)
-        #self.username_input.insert(0, 'pungun1234')
+        self.username_input.bind('<Return>', (lambda event: self._login()))
+        self.username_input.insert(0, 'pungun1234')
 
         self.username_logged_in = Label(self.frame)
         self.username_logged_in.grid(row=0, columnspan=2, pady=10)
@@ -103,7 +111,7 @@ class App(object):
         self.login_button = Button(self.frame, text='Log In', command=self._login)
         self.login_button.grid(row=0, column=1, sticky=E)
 
-        self.start_button = Button(self.frame, text='Start', command=self._start_ad_mute)
+        self.start_button = Button(self.frame, text='Start Monitoring', command=self._start_ad_mute)
         self.start_button.grid(row=1, columnspan=3)
         self.start_button.grid_remove()  # Hide the button until logged in
         self.frame.grid_rowconfigure(1, minsize=35)
@@ -115,7 +123,6 @@ class App(object):
         self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
         self.text_scroll.grid(row=2, column=2, sticky=NSEW)
         self.text.config(yscrollcommand=self.text_scroll.set)
-
         center(self.master)
         self.master.update()
         center(self.master)
@@ -152,6 +159,22 @@ class App(object):
         self.logger.addHandler(hdlr)
         self.logger.setLevel(logging.INFO)
         self.logger.info('Gui: Initialized logger.')
+
+    # Periodically service requests from other threads
+    def tk_loop(self):
+        try:
+            while True:
+                func, arg, response_queue = self.requests.get_nowait()
+                response = func(*arg)
+                if response_queue: response_queue.put(response)
+        except:
+            pass
+
+        root.after(1500, self.tk_loop)
+
+    # Add a request to the queue
+    def request(self, func, arg, response_queue):
+        self.requests.put((func, arg, response_queue))
 
     # Log into Spotify account.
     def _login(self):
@@ -201,6 +224,7 @@ class App(object):
 
     # Ask the user a yes/no question.
     def ask_user_yesno(self, title, message):
+        print("hello")
         return tkinter.messagebox.askyesno(title, message)
 
     # Start polling.
@@ -209,9 +233,9 @@ class App(object):
         self.run_thread = Job(self.logger, self.spotify_ad_mute.poll)
         self.run_thread.start()
 
-        self.start_button.config(text='Stop Listening', command=self.stop_ad_mute)
+        self.start_button.config(text='Stop Monitoring', command=self.stop_ad_mute)
 
-        print('Started listening.')
+        print('Started monitoring.')
         self.logger.info('Gui: Successfully started ad mute.')
 
     # Stop polling.
@@ -222,9 +246,9 @@ class App(object):
             self.spotify_ad_mute.stop_poll()
             self.spotify_ad_mute.clear_cache()
 
-        self.start_button.config(text='Start Listening', command=self._start_ad_mute)
+        self.start_button.config(text='Start Monitoring', command=self._start_ad_mute)
 
-        print('Stopped listening.')
+        print('Stopped monitoring.')
         self.logger.info('Gui: Successfully stopped ad mute.')
 
     # Prints some nice intro text
@@ -256,6 +280,7 @@ class StdRedirector(object):
 if __name__ == '__main__':
     root = Tk()
     app = App(root)
+    app.tk_loop()
 
     try:
         root.mainloop()
