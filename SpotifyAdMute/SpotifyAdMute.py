@@ -32,7 +32,7 @@ class SpotifyAdMute(object):
     '''
         Example usage:
             root = Tk()
-            username = 'ryan wu'
+            username = 'ryanwu'
             spotifyAdMute = SpotifyAdMute(root)
             spotifyAdMute.log_in(username)
     '''

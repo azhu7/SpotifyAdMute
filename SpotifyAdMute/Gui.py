@@ -15,12 +15,16 @@ exit_thread = False
 exit_success = False
 
 ''' TODO
-computer sleep crash program?
 file menu -> about, submit feedback
-to center, first bring offscreen, refresh, then center
 login screen
 '''
 
+
+# Place tkinter window outside of screen (bottom right)
+def hide(root):
+    ws = root.winfo_screenwidth()
+    hs = root.winfo_screenheight()
+    root.geometry('+%d+%d' % (ws, hs))
 
 # Center tkinter window on screen
 def center(root):
@@ -53,7 +57,7 @@ class EntryWindow(object):
         self.submit = Button(self.top, text='Submit', command=self._cleanup)
         self.submit.grid(row=2, column=0)
 
-        center(self.top)
+        hide(self.top)
         self.top.update()
         center(self.top)
 
@@ -123,7 +127,8 @@ class App(object):
         self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
         self.text_scroll.grid(row=2, column=2, sticky=NSEW)
         self.text.config(yscrollcommand=self.text_scroll.set)
-        center(self.master)
+
+        hide(self.master)
         self.master.update()
         center(self.master)
 
