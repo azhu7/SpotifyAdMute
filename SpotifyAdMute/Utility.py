@@ -30,7 +30,7 @@ def get_user_token(logger, app, username, scope, client_id, client_secret, redir
             code = sp_oauth.parse_response_code(response)
             token_info = sp_oauth.get_access_token(code)
         except:
-            logger.info('Utility: Got an exception while getting token. Returning None.')
+            logger.warn('Utility: Got an exception while getting token. Returning None.')
             return None
 
     # Auth'ed API request
@@ -38,5 +38,5 @@ def get_user_token(logger, app, username, scope, client_id, client_secret, redir
         logger.info('Utility: Successfully got token. Returning access token.')
         return token_info['access_token']
     else:
-        logger.info('Utility: Could not get token. Returning None.')
+        logger.warn('Utility: Could not get token. Returning None.')
         return None

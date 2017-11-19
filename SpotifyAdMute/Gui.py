@@ -194,6 +194,7 @@ class App(object):
 
             self.logger.info('Gui: Attempting to login with username: %s.' % self.username)
             self.spotify_ad_mute.login(self.username)
+            self.logger.info('Gui: Successfully logged in with username: %s.' % self.username)
             
             # Transition to logged-in widgets
             self._running_view()
@@ -252,6 +253,7 @@ class App(object):
         self.logger.info('Gui: Successfully stopped ad mute.')
 
     def _login_view(self):
+        self.logger.info('Gui: Switching to login view.')
         hide(self.master)
         for child in self.frame.children.values():
             child.grid_remove()
@@ -261,8 +263,10 @@ class App(object):
         self.login_button.grid()
         self.master.update()
         center(self.master)
+        self.logger.info('Gui: Switched to login view.')
 
     def _running_view(self):
+        self.logger.info('Gui: Switching to running view.')
         hide(self.master)
         for child in self.frame.children.values():
             child.grid_remove()
@@ -281,6 +285,7 @@ class App(object):
 
         self.master.update()
         center(self.master)
+        self.logger.info('Gui: Switched to running view.')
 
     # Prints some nice intro text
     def _print_intro(self, first_name):
