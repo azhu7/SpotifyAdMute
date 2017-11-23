@@ -13,3 +13,5 @@
 **/*.egg
 **.vs/
 make.bat
+/SpotifyAdMute/.data
+/SpotifyAdMute/.logs

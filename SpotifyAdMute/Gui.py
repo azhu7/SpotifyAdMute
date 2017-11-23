@@ -16,7 +16,9 @@ exit_success = False
 
 ''' TODO
 file menu -> about, submit feedback
-login screen
+login screen (<return> anywhere calls login)
+login screen auto-populate last logged in
+
 '''
 
 
@@ -65,6 +67,12 @@ class EntryWindow(object):
         self.value = self.entry.get()
         self.top.destroy()
 
+class RepeatingTimer(threading._Timer):
+    def run(self):
+        while not self.finished.is_set():
+            self.function(*self.args, **self.kwargs)
+            self.finished.wait(self.interval)
+
 class Job(threading.Thread):
     def __init__(self, logger, target):
         threading.Thread.__init__(self)
@@ -75,7 +83,14 @@ class Job(threading.Thread):
     def run(self):
         self.logger.info('Job: Thread %d started.' % self.ident)
         while not self.shutdown_flag.is_set():
-            self.target()
+            try:
+                self.target()
+            except SpotifyAdMuteException as err:
+                self.logger.error('Job: While running target, got exception: %s' % str(err))
+                break
+            except:
+                self.logger.error('Job: While running target, got unexpected exception!')
+                break
  
         self.logger.info('Job: Thread %d stopped.' % self.ident)
 
@@ -84,6 +99,10 @@ class App(object):
 
     run_thread = None
     username = None
+    running_ad_mute = False
+    log_folder = '.logs'
+    cache_folder = '.data'
+    cache_path = '%s/.spotify_ad_mute_cache' % cache_folder
 
     # Initialize the App, creating the logger and widgets.
     def __init__(self, master):
@@ -108,7 +127,18 @@ class App(object):
         self.username_input = Entry(self.frame)
         self.username_input.grid(row=0, column=1, sticky=W, pady=(10, 0))
         self.username_input.bind('<Return>', (lambda event: self._login()))
-        self.username_input.insert(0, 'pungun1234')
+
+        # Caching
+        if not os.path.isdir(self.cache_folder):
+            self.logger.info('Gui: Creating cache_folder at %s' % self.cache_folder)
+            os.mkdir(self.cache_folder)
+        if os.path.isfile(self.cache_path):
+            with open(self.cache_path, 'r') as cache:
+                cached_username = cache.readline()
+                self.logger.info('Gui: Found cached username: %s.' % cached_username)
+                self.username_input.insert(0, cached_username)
+        else:
+            self.logger.info('Gui: Did not find cache file: %s' % self.cache_path)
 
         self.username_logged_in_label = Label(self.frame)
         self.username_logged_in_label.grid(row=0, columnspan=2, pady=(5, 0))
@@ -137,6 +167,8 @@ class App(object):
         self.master.update()
         center(self.master)
 
+        self._heartbeat()
+
         self.logger.info('Gui: Successfully initialized all widgets.')
 
     # Cleanup all resources used by app.
@@ -146,6 +178,7 @@ class App(object):
             print('Thanks for using Spotify Ad Mute!')
             exit_thread = True
             exit_success = True
+            self.heartbeat.cancel()
             if self.run_thread:
                 self.run_thread.shutdown_flag.set()
                 self.spotify_ad_mute.stop_poll()
@@ -159,7 +192,7 @@ class App(object):
     def _init_logger(self):
         self.logger = logging.getLogger('SpotifyAdMute')
         current_time = time.strftime('%Y_%m_%d_%H_%M_%S', time.gmtime())
-        log_folder = os.path.dirname(os.path.realpath(__file__)) + '/.tmp'
+        log_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.log_folder)
         if not os.path.exists(log_folder):
             os.makedirs(log_folder)
 
@@ -169,6 +202,14 @@ class App(object):
         self.logger.addHandler(hdlr)
         self.logger.setLevel(logging.INFO)
         self.logger.info('Gui: Initialized logger.')
+
+    def _heartbeat(self):
+        self.heartbeat = RepeatingTimer(10, self._heartbeat_tick)
+        self.heartbeat.start()
+
+    def _heartbeat_tick(self):
+        if self.running_ad_mute and not (self.run_thread and self.run_thread.is_alive()):
+            self.stop_ad_mute()
 
     # Periodically service requests from other threads
     def tk_loop(self):
@@ -194,6 +235,7 @@ class App(object):
 
             self.logger.info('Gui: Attempting to login with username: %s.' % self.username)
             self.spotify_ad_mute.login(self.username)
+            self._cache_username(self.username)
             self.logger.info('Gui: Successfully logged in with username: %s.' % self.username)
             
             # Transition to logged-in widgets
@@ -230,6 +272,8 @@ class App(object):
 
     # Start polling.
     def _start_ad_mute(self):
+        self.running_ad_mute = True
+
         # Start a new thread to poll
         self.run_thread = Job(self.logger, self.spotify_ad_mute.poll)
         self.run_thread.start()
@@ -241,12 +285,14 @@ class App(object):
 
     # Stop polling.
     def stop_ad_mute(self):
+        self.running_ad_mute = False
+
         # Kill the polling thread
         if self.run_thread:
             self.run_thread.shutdown_flag.set()
             self.spotify_ad_mute.stop_poll()
-            self.spotify_ad_mute.clear_cache()
-
+            
+        self.spotify_ad_mute.clear_cache()
         self.start_button.config(text='Start Monitoring', command=self._start_ad_mute)
 
         print('Stopped monitoring.')
@@ -286,6 +332,11 @@ class App(object):
         self.master.update()
         center(self.master)
         self.logger.info('Gui: Switched to running view.')
+
+    def _cache_username(self, username):
+        self.logger.info('Gui: Caching username: %s.' % username)
+        file = open(self.cache_path, 'w')
+        file.write(username)
 
     # Prints some nice intro text
     def _print_intro(self, first_name):
