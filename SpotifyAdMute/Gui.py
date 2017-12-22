@@ -17,8 +17,10 @@ exit_success = False
 ''' TODO
 file menu -> about, submit feedback
 login screen (<return> anywhere calls login)
-login screen auto-populate last logged in
-
+remove logs older than 30 days
+detect sleep and wakeup
+clear text button
+change tkinter top left icon
 '''
 
 

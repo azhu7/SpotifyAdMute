@@ -101,8 +101,6 @@ class SpotifyAdMute(object):
         success = False
         duration = 0.5  # Seconds to wait
         while retry_attempts > 0 and not success:
-            self.logger.info('Waiting for %d sec. Retry attempts left: %d' % (duration, retry_attempts))
-
             try:
                 results = self.spotify._get('me/player/currently-playing')
                 success = True
