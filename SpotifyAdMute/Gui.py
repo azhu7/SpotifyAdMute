@@ -69,7 +69,7 @@ class EntryWindow(object):
         self.value = self.entry.get()
         self.top.destroy()
 
-class RepeatingTimer(threading._Timer):
+class RepeatingTimer(threading.Timer):
     def run(self):
         while not self.finished.is_set():
             self.function(*self.args, **self.kwargs)
