@@ -4,13 +4,21 @@ Spotify Ad Mute is a simple Spotify listener that mutes ads.
 
 ## Quickstart
 To run, just download the newest .exe in the distribution folder and run locally  
-- Currently only supports Windows (OS-X coming soon!).
+- Currently only supports Windows (OS-X coming soon!).  
+
+Or, clone the repo and run Gui.py
+```bash
+git clone https://github.com/azhu7/SpotifyAdMute.git
+cd SpotifyAdMute/SpotifyAdMute
+python Gui.py
+```
 
 ## Installation
 If you already have [Python](http://www.python.org/) on your system, you can install the library by cloning the repo and running:  
 ```bash
 python setup.py install
 ```
+> This is untested. Probably does not work at the moment.
 
 ## Reporting Issues
 Please file any suggestions, bugs, or other feedback [here](https://github.com/azhu7/SpotifyAdMute/issues).
