@@ -7,7 +7,7 @@ To run, just download the newest .exe in the distribution folder and run locally
 - Currently only supports Windows (OS-X coming soon!).
 
 ## Manual Installation
-Requires
+### Requires
 - [Anaconda](https://www.anaconda.com/download/) (Python3.6)  
 - git (```conda install -c anaconda git``` in Anaconda Prompt)  
 - tk (```conda install -c anaconda tk``` in Anaconda Prompt)
