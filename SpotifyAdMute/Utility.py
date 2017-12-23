@@ -1,3 +1,9 @@
+'''
+Author:        Alexander Zhu
+Date Created:  13 November, 2017
+Description:   Utility for Spotify Ad Mute
+'''
+
 import os
 import spotipy.oauth2 as oauth2
 

@@ -1,4 +1,8 @@
-from __future__ import print_function
+'''
+Author:        Alexander Zhu
+Date Created:  13 November, 2017
+Description:   Gui for Spotify Ad Mute
+'''
 
 import sys
 import os
@@ -21,8 +25,21 @@ remove logs older than 30 days
 detect sleep and wakeup
 clear text button
 change tkinter top left icon
+make url part more intuitive...have a welcome box and have them click to progress.
 '''
 
+# Redirect from output stream to a text widget.
+class StdRedirector(object):
+    def __init__(self, widget):
+        self.widget = widget
+    def write(self, string):
+        if not exit_thread:
+            self.widget.configure(state='normal')
+            self.widget.insert(END,string)
+            self.widget.see(END)
+            self.widget.configure(state='disabled')
+    def flush(self):
+        pass
 
 # Place tkinter window outside of screen (bottom right)
 def hide(root):
@@ -351,19 +368,6 @@ class App(object):
         print('')
         print('#######################################################')
         print('')
-
-# Redirect from output stream to a text widget.
-class StdRedirector(object):
-    def __init__(self, widget):
-        self.widget = widget
-    def write(self, string):
-        if not exit_thread:
-            self.widget.configure(state='normal')
-            self.widget.insert(END,string)
-            self.widget.see(END)
-            self.widget.configure(state='disabled')
-    def flush(self):
-        pass
 
 # Run the app.
 if __name__ == '__main__':

@@ -1,10 +1,9 @@
 '''
 Author:        Alexander Zhu
-Date Created:  11 November, 2017
-Description:   A simple Spotify listener that mutes during ads and unmutes during music
+Date Created:  12 November, 2017
+Description:   Spotify Ad Mute: A simple Spotify listener that mutes ads
 '''
 
-from __future__ import print_function
 import sys
 import os
 import time
