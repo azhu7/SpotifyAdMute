@@ -249,8 +249,6 @@ class SpotifyAdMute(object):
         else:
             self.first_name = self.spotify.current_user()['display_name'].split()[0]
 
-        self.logger.info('SpotifyAdMute: Successfully logged in as %s' % self.username)
-
     # Log out
     def logout(self):
         self.logger.info('SpotifyAdMute: Successfully logged out from %s' % self.username)
