@@ -4,13 +4,14 @@ Date Created:  13 November, 2017
 Description:   Gui for Spotify Ad Mute
 '''
 
+from __future__ import print_function
+
 import sys
 import os
 import threading
 import logging
 import time
 from Tkinter import *
-#import Tkinter.messagebox
 import tkMessageBox
 import tkFont
 from SpotifyAdMute import SpotifyAdMute, SpotifyAdMuteException
@@ -268,7 +269,7 @@ class App(object):
 
             self.logger.info('Gui: Logged in with username: %s, started polling.' % self.username)
         except SpotifyAdMuteException as err:
-            Tkinter.messagebox.showerror(title='Error', message=err)
+            tkMessageBox.showerror(title='Error', message=err)
 
     # Log out from Spotify account. Transitions back to login screen.
     def _logout(self):
@@ -288,7 +289,7 @@ class App(object):
 
     # Ask the user a yes/no question.
     def ask_user_yesno(self, title, message):
-        return Tkinter.messagebox.askyesno(title, message)
+        return tkMessageBox.askyesno(title, message)
 
     # Start polling.
     def _start_ad_mute(self):
