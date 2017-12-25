@@ -10,7 +10,7 @@ import time
 import requests
 import logging
 import threading
-from queue import Queue
+import Queue
 
 # Spotify API
 import spotipy
@@ -136,7 +136,7 @@ class SpotifyAdMute(object):
 
             if not success:
                 self.logger.error('SpotifyAdMute: Could not poll for currently playing track information. Waiting for user input.')
-                response_queue = Queue()
+                response_queue = Queue.Queue()
                 self.app.request(self.app.ask_user_yesno, ('Error', 'Could not poll for currently playing track information. Check %s for more info.\n\n\tTry again?' % self.logger.handlers[0].baseFilename), response_queue)
                 response = response_queue.get()
                 done = False

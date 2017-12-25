@@ -9,11 +9,12 @@ import os
 import threading
 import logging
 import time
-from tkinter import *
-import tkinter.messagebox
-import tkinter.font
+from Tkinter import *
+#import Tkinter.messagebox
+import tkMessageBox
+import tkFont
 from SpotifyAdMute import SpotifyAdMute, SpotifyAdMuteException
-from queue import Queue
+import Queue
 
 exit_thread = False
 exit_success = False
@@ -24,7 +25,7 @@ login screen (<return> anywhere calls login)
 remove logs older than 30 days
 detect sleep and wakeup
 clear text button
-change tkinter top left icon
+change Tkinter top left icon
 make url part more intuitive...have a welcome box and have them click to progress.
 '''
 
@@ -41,13 +42,13 @@ class StdRedirector(object):
     def flush(self):
         pass
 
-# Place tkinter window outside of screen (bottom right)
+# Place Tkinter window outside of screen (bottom right)
 def hide(root):
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
     root.geometry('+%d+%d' % (ws, hs))
 
-# Center tkinter window on screen
+# Center Tkinter window on screen
 def center(root):
     # Get screen width and height
     w = root.winfo_width()
@@ -86,7 +87,7 @@ class EntryWindow(object):
         self.value = self.entry.get()
         self.top.destroy()
 
-class RepeatingTimer(threading.Timer):
+class RepeatingTimer(threading._Timer):
     def run(self):
         while not self.finished.is_set():
             self.function(*self.args, **self.kwargs)
@@ -114,7 +115,7 @@ class Job(threading.Thread):
         self.logger.info('Job: Thread %d stopped.' % self.ident)
 
 class App(object):
-    requests = Queue()  # Let other threads create widgets
+    requests = Queue.Queue()  # Let other threads create widgets
 
     run_thread = None
     username = None
@@ -132,7 +133,7 @@ class App(object):
 
         self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
         self.master.title('Spotify Ad Mute')
-        default_font = tkinter.font.nametofont('TkDefaultFont')
+        default_font = tkFont.nametofont('TkDefaultFont')
         default_font.configure(size=11, family='Trebuchet MS')
         self.master.option_add('*Font', default_font)  # Default font is Trebuchet MS, size 11
 
@@ -192,7 +193,7 @@ class App(object):
 
     # Cleanup all resources used by app.
     def _cleanup(self):
-        if tkinter.messagebox.askyesno('Exit', 'Are you sure you want to quit the application?'):
+        if tkMessageBox.askyesno('Exit', 'Are you sure you want to quit the application?'):
             self.logger.info('Gui: Cleaning up application.')
             print('Thanks for using Spotify Ad Mute!')
             exit_thread = True
@@ -267,7 +268,7 @@ class App(object):
 
             self.logger.info('Gui: Logged in with username: %s, started polling.' % self.username)
         except SpotifyAdMuteException as err:
-            tkinter.messagebox.showerror(title='Error', message=err)
+            Tkinter.messagebox.showerror(title='Error', message=err)
 
     # Log out from Spotify account. Transitions back to login screen.
     def _logout(self):
@@ -287,7 +288,7 @@ class App(object):
 
     # Ask the user a yes/no question.
     def ask_user_yesno(self, title, message):
-        return tkinter.messagebox.askyesno(title, message)
+        return Tkinter.messagebox.askyesno(title, message)
 
     # Start polling.
     def _start_ad_mute(self):

@@ -12,7 +12,7 @@ To run, just download the newest .exe in the distribution folder and run locally
 - git (```conda install -c anaconda git``` in Anaconda Prompt)  
 - tk (```conda install -c anaconda tk``` in Anaconda Prompt)
 - spotipy (```pip install spotipy```)
-- pycaw (```pip install pycaw```)
+- pycaw (```pip install https://github.com/AndreMiras/pycaw/archive/master.zip```)
 
 ```bash
 git clone https://github.com/azhu7/SpotifyAdMute.git
