@@ -24,6 +24,6 @@ python Gui.py
 Please file any suggestions, bugs, or other feedback [here](https://github.com/azhu7/SpotifyAdMute/issues).
 
 ## Version
-- v1.0.0 - 16 November, 2017 - Initial release
-- v1.0.4 - 23 November, 2017 - Improved UI, bug fixes
 - v1.0.6 - 28 December, 2017 - Improved UI, bug fixes, added images
+- v1.0.4 - 23 November, 2017 - Improved UI, bug fixes
+- v1.0.0 - 16 November, 2017 - Initial release
