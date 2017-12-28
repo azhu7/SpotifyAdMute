@@ -13,6 +13,7 @@ import requests
 import logging
 import threading
 import Queue
+from enum import Enum
 
 # Spotify API
 import spotipy
@@ -32,7 +33,7 @@ class SpotifyAdMuteException(Exception):
 
 class SpotifyAdMute(object):
     # Spotify playback states
-    class State:
+    class State(Enum):
         Paused = 1
         Music = 2
         Ad = 3
@@ -44,7 +45,7 @@ class SpotifyAdMute(object):
 
     username = None
     first_name = None
-    state = None
+    state = State.Paused
     current_track = None
     cv = threading.Condition()
     notified = False
@@ -153,8 +154,8 @@ class SpotifyAdMute(object):
         return results
 
     # Print track information.
-    def _print_track(self, item):
-        return '"%s" by %s' % (item['name'], item['artists'][0]['name'])
+    def print_current_track(self):
+        return '"%s" by %s' % (self.current_track['name'], self.current_track['artists'][0]['name'])
 
     # Compute remaining time.
     def _get_sleep_duration(self, results):
@@ -195,29 +196,32 @@ class SpotifyAdMute(object):
             # Paused state
             if self.state != self.State.Paused:
                 self.state = self.State.Paused
-                self.current_track = ""
+                self.current_track = None
                 print('Not playing music. No action taken.')
                 self.logger.info('SpotifyAdMute: Not playing music. No action taken.')
+                self.app.set_currently_playing_label()
         elif results['item']:
             self.logger.info('SpotifyAdMute: Entering music state. Current track: {%s}. Current state: {%s}.' %(self.current_track, self.state))
             # Music state
             self._protected_set_mute(0)
-            if self.current_track != results['item']['name'] or self.state != self.State.Music:
+            if (self.current_track != None and self.current_track['name'] != results['item']['name']) or self.state != self.State.Music:
                 self.state = self.State.Music
-                self.current_track = results['item']['name']
-                message = 'Currently playing %s' % self._print_track(results['item'])
+                self.current_track = results['item']
+                message = 'Currently playing %s' % self.print_current_track()
                 print(message)
                 self.logger.info('SpotifyAdMute: %s' % message)
+                self.app.set_currently_playing_label()
         elif not results['item']:
             self.logger.info('SpotifyAdMute: Entering ad state. Current track: {%s}. Current state: {%s}.' %(self.current_track, self.state))
             # Ad state
             self._protected_set_mute(1)
             if self.state != self.State.Ad:
                 self.state = self.State.Ad
-                self.current_track = ""
+                self.current_track = None
                 message = 'Playing ad. Muting!'
                 print(message)
                 self.logger.info('SpotifyAdMute: %s' % message)
+                self.app.set_currently_playing_label()
 
         # Sleep until timeout or wakeup from a call to stop_poll()
         duration = self._get_sleep_duration(results)

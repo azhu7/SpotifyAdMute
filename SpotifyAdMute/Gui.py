@@ -14,20 +14,26 @@ import time
 from Tkinter import *
 import tkMessageBox
 import tkFont
+from PIL import ImageTk, Image
 from SpotifyAdMute import SpotifyAdMute, SpotifyAdMuteException
 import Queue
+from enum import Enum
 
 exit_thread = False
 exit_success = False
 
 ''' TODO
-file menu -> about, submit feedback
-login screen (<return> anywhere calls login)
-remove logs older than 30 days
-detect sleep and wakeup
-clear text button
-change Tkinter top left icon
-make url part more intuitive...have a welcome box and have them click to progress.
+bug: should center only on start. otherwise, center goes back to where window was previously
+bug: click show details for the first time, should be able to scroll w/o clicking text
+feature: file menu -> about, submit feedback
+feature: login screen (<return> anywhere calls login)
+feature: remove logs older than 30 days
+feature: detect sleep and wakeup
+feature: clear text button (?)
+feature: change Tkinter top left icon
+feature: make url part more intuitive...have a welcome box and have them click to progress.
+feature: check for updates
+feature: make hide/show details button prettier
 '''
 
 # Redirect from output stream to a text widget.
@@ -118,12 +124,20 @@ class Job(threading.Thread):
 class App(object):
     requests = Queue.Queue()  # Let other threads create widgets
 
+    version = '1.0.6'
     run_thread = None
     username = None
     running_ad_mute = False
     log_folder = '.logs'
     cache_folder = '.data'
     cache_path = '%s/.spotify_ad_mute_cache' % cache_folder
+    view = None
+    show_details = False
+    printed_intro = False
+
+    class View(Enum):
+        Login = 0
+        Running = 1
 
     # Initialize the App, creating the logger and widgets.
     def __init__(self, master):
@@ -133,10 +147,12 @@ class App(object):
         hide(self.master)
 
         self.master.protocol('WM_DELETE_WINDOW', self._cleanup)  # Use our own cleanup logic
-        self.master.title('Spotify Ad Mute')
+        self.master.title('Spotify Ad Mute %s' % self.version)
         default_font = tkFont.nametofont('TkDefaultFont')
         default_font.configure(size=11, family='Trebuchet MS')
         self.master.option_add('*Font', default_font)  # Default font is Trebuchet MS, size 11
+
+        self.master.iconbitmap(default='assets/spotifyadmute_icon.ico')
 
         # Initialize widgets
         self.frame = Frame(self.master)
@@ -162,25 +178,47 @@ class App(object):
             self.logger.info('Gui: Did not find cache file: %s' % self.cache_path)
 
         self.username_logged_in_label = Label(self.frame)
-        self.username_logged_in_label.grid(row=0, columnspan=2, pady=(5, 0))
+        self.username_logged_in_label.grid(row=0, column=1, columnspan=2, pady=(10, 0))
+
+        # Make sure columns are wide enough for labels
+        self.frame.grid_columnconfigure(1, minsize=110)
+        self.frame.grid_columnconfigure(2, minsize=110)
+
+        #self.logo = create_image_label(self.frame, 'assets/spotifyadmute_logo_65x65.png')
+        self.music_img = ImageTk.PhotoImage(Image.open('assets/music-50.png'))
+        self.pause_img = ImageTk.PhotoImage(Image.open('assets/pause-50.png'))
+        self.mute_img = ImageTk.PhotoImage(Image.open('assets/mute-50.png'))
+        self.image_label = Label(self.frame)
+        self.image_label.grid(row=0, column=0, rowspan=2, padx=(0, 0), pady=(0, 0))
 
         self.login_button = Button(self.frame, text='Log In', command=self._login)
         self.login_button.grid(row=0, column=2, sticky=E, padx=(20, 10), pady=(10, 0))
 
         self.logout_button = Button(self.frame, text='Log Out', command=self._logout)
-        self.logout_button.grid(row=0, column=1, columnspan=2, sticky=E, padx=(0, 10), pady=(10, 0))
+        self.logout_button.grid(row=0, column=3, sticky=E, padx=(0, 10), pady=(10, 0))
 
-        self.start_button = Button(self.frame, text='Start Monitoring', command=self._start_ad_mute)
-        self.start_button.grid(row=1, columnspan=3)
-        self.frame.grid_rowconfigure(1, minsize=35)
+        self.currently_playing_label = Message(self.frame, width=250)
+        self.currently_playing_label.grid(row=1, column=1, columnspan=2)
 
-        self.text = Text(self.frame, borderwidth=3, relief='sunken', width=55, height=20, wrap='word', state='disabled')
-        self.text.grid(row=2, columnspan=2, sticky=NSEW, padx=(5, 0), pady=5)
+        self.details_button_text = StringVar()
+        self.details_button_text.set('Show details')
+        self.details_button = Button(self.frame, textvariable=self.details_button_text, command=self._toggle_details)
+        self.details_button.grid(row=2, column=0, sticky=W, padx=(10, 0), pady=(10, 10))
+
+        self.monitoring_button_text = StringVar()
+        self.monitoring_button_text.set('Start Monitoring')
+        self.monitoring_button = Button(self.frame, textvariable=self.monitoring_button_text, command=self._start_ad_mute)
+        self.monitoring_button.grid(row=2, column=1, columnspan=2)
+
+        self.text = Text(self.frame, borderwidth=3, relief='sunken', width=50, height=10, wrap='word', state='disabled')
+        self.text.grid(row=3, columnspan=4, sticky=NSEW, padx=(5, 0), pady=5)
         sys.stdout = StdRedirector(self.text)
 
         self.text_scroll = Scrollbar(self.frame, command=self.text.yview)
-        self.text_scroll.grid(row=2, column=2, sticky=NSEW, pady=10)
+        self.text_scroll.grid(row=3, column=4, sticky=NSEW, pady=10)
         self.text.config(yscrollcommand=self.text_scroll.set)
+
+        self.frame.grid_rowconfigure(1, minsize=35)
 
         # Start at login view
         self._login_view()
@@ -224,10 +262,12 @@ class App(object):
         self.logger.setLevel(logging.INFO)
         self.logger.info('Gui: Initialized logger.')
 
+    # Periodically make sure invariants are satisfied
     def _heartbeat(self):
         self.heartbeat = RepeatingTimer(10, self._heartbeat_tick)
         self.heartbeat.start()
 
+    # Heartbeat function
     def _heartbeat_tick(self):
         if self.running_ad_mute and not (self.run_thread and self.run_thread.is_alive()):
             self.stop_ad_mute()
@@ -251,6 +291,7 @@ class App(object):
     # Log into Spotify account.
     def _login(self):
         try:
+            # Initialize SpotifyAdMute and log in
             self.username = self.username_input.get()
             self.spotify_ad_mute = SpotifyAdMute(self, self.logger)
 
@@ -262,7 +303,9 @@ class App(object):
             # Transition to logged-in widgets
             self._running_view()
 
-            self._print_intro(self.spotify_ad_mute.first_name)
+            if not self.printed_intro:
+                self._print_intro(self.spotify_ad_mute.first_name)
+                self.printed_intro = True
 
             # Start polling
             self._start_ad_mute()
@@ -299,7 +342,8 @@ class App(object):
         self.run_thread = Job(self.logger, self.spotify_ad_mute.poll)
         self.run_thread.start()
 
-        self.start_button.config(text='Stop Monitoring', command=self.stop_ad_mute)
+        self.monitoring_button_text.set('Stop Monitoring')
+        self.monitoring_button.config(command=self.stop_ad_mute)
 
         print('Started monitoring.')
         self.logger.info('Gui: Successfully started ad mute.')
@@ -307,6 +351,7 @@ class App(object):
     # Stop polling.
     def stop_ad_mute(self):
         self.running_ad_mute = False
+        self.set_currently_playing_label()
 
         # Kill the polling thread
         if self.run_thread:
@@ -314,11 +359,13 @@ class App(object):
             self.spotify_ad_mute.stop_poll()
             
         self.spotify_ad_mute.clear_cache()
-        self.start_button.config(text='Start Monitoring', command=self._start_ad_mute)
+        self.monitoring_button_text.set('Start Monitoring')
+        self.monitoring_button.config(command=self._start_ad_mute)
 
         print('Stopped monitoring.')
         self.logger.info('Gui: Successfully stopped ad mute.')
 
+    # Switch to the login view.
     def _login_view(self):
         self.logger.info('Gui: Switching to login view.')
         hide(self.master)
@@ -330,8 +377,11 @@ class App(object):
         self.login_button.grid()
         self.master.update()
         center(self.master)
+
+        self.view = self.View.Login
         self.logger.info('Gui: Switched to login view.')
 
+    # Switch to the running view.
     def _running_view(self):
         self.logger.info('Gui: Switching to running view.')
         hide(self.master)
@@ -341,34 +391,75 @@ class App(object):
         self.username_logged_in_label.config(text='Logged in as %s' % self.username)
         self.username_logged_in_label.grid()
         self.logout_button.grid()
-        self.start_button.grid()
-
-        # Clear text before showing
-        self.text.configure(state='normal')
-        self.text.delete(1.0, END)
-        self.text.configure(state='disabled')
-        self.text.grid()
-        self.text_scroll.grid()
+        self.monitoring_button.grid()
+        self.currently_playing_label.config(text='')
+        self.currently_playing_label.grid()
+        self.details_button.grid()
 
         self.master.update()
         center(self.master)
+
+        self.view = self.View.Running
+        self.show_details = False
         self.logger.info('Gui: Switched to running view.')
 
+    def set_currently_playing_label(self):
+        if not self.running_ad_mute:
+            self.currently_playing_label.config(text='Monitoring is off.')
+            if self.image_label.grid_info():
+                self.image_label.grid_remove()
+            return
+
+        if self.spotify_ad_mute.state == SpotifyAdMute.State.Music:
+            track = self.spotify_ad_mute.print_current_track()
+            current_image = self.music_img
+        elif self.spotify_ad_mute.state == SpotifyAdMute.State.Ad:
+            track = 'an ad'
+            current_image = self.music_img
+        elif self.spotify_ad_mute.state == SpotifyAdMute.State.Paused:
+            track = 'nothing'
+            current_image = self.pause_img
+
+        self.image_label.config(image=current_image)
+        self.image_label.image = current_image
+        if not self.image_label.grid_info():
+            self.image_label.grid()
+
+        self.currently_playing_label.config(text='Currently playing %s.' % track)
+
+    def _toggle_details(self):
+        self.show_details = not self.show_details
+        if self.show_details:
+            # Clear text before showing.
+            #self.text.configure(state='normal')
+            #self.text.delete(1.0, END)
+            #self.text.configure(state='disabled')
+            #self.details_button.config(text='Hide details')
+            self.details_button_text.set('Hide details')
+            self.text.grid()
+            self.text_scroll.grid()
+        else:
+            #self.details_button.config(text='Show details')
+            self.details_button_text.set('Show details')
+            self.text.grid_remove()
+            self.text_scroll.grid_remove()
+
+    # Save username to load on future runs.
     def _cache_username(self, username):
         self.logger.info('Gui: Caching username: %s.' % username)
         file = open(self.cache_path, 'w')
         file.write(username)
 
-    # Prints some nice intro text
+    # Prints some nice intro text.
     def _print_intro(self, first_name):
-        print('#######################################################')
+        print('##################################################')
         print('')
         print('\tWelcome to Spotify Ad Mute, {0}!'.format(first_name))
         print('')
-        print('\tThe app will monitor your Spotify playback and ')
-        print('\tmute during ads.')
+        print('\tThe app will monitor your Spotify playback')
+        print('\tand mute during ads.')
         print('')
-        print('#######################################################')
+        print('##################################################')
         print('')
 
 # Run the app.

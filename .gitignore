@@ -15,4 +15,5 @@
 make.bat
 **/.data
 **/.logs
+**/.assets
 old_versions/
