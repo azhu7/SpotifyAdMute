@@ -3,7 +3,7 @@
 Spotify Ad Mute is a simple Spotify listener that mutes ads.
 
 ## Quickstart
-To run, just download the newest .exe in the distribution folder and run locally  
+To run, download the repo and run the .exe in the distribution folder  
 - Currently only supports Windows (OS-X coming soon!).
 
 ## Manual Installation
@@ -25,4 +25,5 @@ Please file any suggestions, bugs, or other feedback [here](https://github.com/a
 
 ## Version
 - v1.0.0 - 16 November, 2017 - Initial release
-- v1.0.4 - 23 November, 2017 - Improved UI, Bug fixes
+- v1.0.4 - 23 November, 2017 - Improved UI, bug fixes
+- v1.0.6 - 28 December, 2017 - Improved UI, bug fixes, added images
