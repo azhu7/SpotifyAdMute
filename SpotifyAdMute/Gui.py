@@ -444,7 +444,7 @@ class App(object):
             current_image = self.music_img
         elif self.spotify_ad_mute.state == SpotifyAdMute.State.Ad:
             track = 'an ad'
-            current_image = self.music_img
+            current_image = self.mute_img
         elif self.spotify_ad_mute.state == SpotifyAdMute.State.Paused:
             track = 'nothing'
             current_image = self.pause_img
