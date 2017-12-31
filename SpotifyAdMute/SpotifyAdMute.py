@@ -43,13 +43,20 @@ class SpotifyAdMute(object):
     spotify = None
     volume = None
 
+    # Cached information
     username = None
     first_name = None
-    state = State.Paused
+    state = None
     current_track = None
+
+    # To break out of sleep early
     cv = threading.Condition()
     notified = False
     quit = False
+
+    # Default poll sleep times (in seconds)
+    ad_default_sleep = 4
+    music_default_sleep = 10
 
     # Initialize modules
     def __init__(self, app, logger):
@@ -98,15 +105,18 @@ class SpotifyAdMute(object):
         self.logger.info('SpotifyAdMute: Initialized volume.')
 
     # Poll Spotify for information on currently playing track.
-    def _try_get_currently_playing(self, retry_attempts=5):
+    def _try_get_currently_playing(self, retry_attempts=3):
         results = None
         success = False
         duration = 0.5  # Seconds to wait
         while retry_attempts > 0 and not success:
             try:
+                self.logger.info('Querying Spotify.')
                 results = self.spotify._get('me/player/currently-playing')
+                self.logger.info('Queried Spotify.')
                 success = True
             except spotipy.client.SpotifyException as err:
+                # TODO: Try manually raising this error and seeing what happens
                 self.logger.error('SpotifyAdMute: While polling for currently playing track information, got exception %s' % str(err))
                 retry_attempts -= 1
                 self._init_spotify()
@@ -115,6 +125,7 @@ class SpotifyAdMute(object):
                 retry_attempts -= 1
 
             if not success:
+                self.logger.info('Printing')
                 print('Could not poll Spotify. Retrying in %d seconds' % duration)
                 self.logger.info('SpotifyAdMute: Waiting for %d seconds before retrying poll.' % duration)
                 self.cv.acquire()
@@ -147,8 +158,20 @@ class SpotifyAdMute(object):
                     if response:
                         done = True
                     else:
-                        self.app.stop_ad_mute()
+                        self.app.request(self.app.stop_ad_mute, None, None)
                         self.quit = True  # Quit when we return to poll()
+                        self.logger.info('SpotifyAdMute: User said to stop polling. Sleeping until stop_ad_mute request is serviced by Gui.')
+                        self.cv.acquire()
+                        self.cv.wait()
+                        self.cv.release()
+
+                        if self.notified:
+                            self.logger.info('SpotifyAdMute: Indeed, we broke out of the wait with the stop_poll function.')
+                            self.notified = False
+                        else:
+                            self.logger.warn('SpotifyAdMute: Woke up from something else signalling cv?')
+
+                        self.logger.info('SpotifyAdMute: stop_ad_mute request was serviced. Stopping ad mute now.')
                         return results
 
         return results
@@ -160,13 +183,13 @@ class SpotifyAdMute(object):
     # Compute remaining time.
     def _get_sleep_duration(self, results):
         if not results or not results['item']:
-            return 4  # Sleep for 4 seconds if playing ad
+            return self.ad_default_sleep  # Sleep for 4 seconds if playing ad
 
         # Sleep for 10 seconds by default, or less if a track is about to end
         # We poll regularly in case the user skips a track and enters an ad
         # Add 1s to ensure we poll after ad begins
         remaining_duration = (results['item']['duration_ms'] - results['progress_ms']) / 1000 + 1
-        return min([remaining_duration, 10])
+        return min([remaining_duration, self.music_default_sleep])
         
     def _protected_set_mute(self, mute):
         try:
@@ -199,7 +222,7 @@ class SpotifyAdMute(object):
                 self.current_track = None
                 print('Not playing music. No action taken.')
                 self.logger.info('SpotifyAdMute: Not playing music. No action taken.')
-                self.app.set_currently_playing_label()
+                self.app.request(self.app.set_currently_playing_label, None, None)
         elif results['item']:
             self.logger.info('SpotifyAdMute: Entering music state. Current track: {%s}. Current state: {%s}.' %(self.current_track, self.state))
             # Music state
@@ -210,7 +233,7 @@ class SpotifyAdMute(object):
                 message = 'Currently playing %s' % self.print_current_track()
                 print(message)
                 self.logger.info('SpotifyAdMute: %s' % message)
-                self.app.set_currently_playing_label()
+                self.app.request(self.app.set_currently_playing_label, None, None)
         elif not results['item']:
             self.logger.info('SpotifyAdMute: Entering ad state. Current track: {%s}. Current state: {%s}.' %(self.current_track, self.state))
             # Ad state
