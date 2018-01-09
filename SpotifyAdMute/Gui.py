@@ -24,6 +24,7 @@ exit_success = False
 
 ''' TODO
 bug: entrywindow should spawn centered respective to main window
+bug: something about pressing enter twice at log in crashes the gui...
 todo: try manually raising exception in SpotifyAdMute::_try_get_currently_playing()
 feature: file menu -> about, submit feedback
 feature: remove logs older than 30 days
@@ -276,6 +277,7 @@ class App(object):
 
     # Heartbeat function
     def _heartbeat_tick(self):
+        #self.master.update()
         if self.running_ad_mute and not (self.run_thread and self.run_thread.is_alive()):
             self.stop_ad_mute()
 
@@ -297,7 +299,7 @@ class App(object):
         root.after(1500, self.tk_loop)
 
     # Add a request to the queue
-    def request(self, func, arg, response_queue):
+    def request(self, func, arg = None, response_queue = None):
         self.requests.put((func, arg, response_queue))
 
     # Log into Spotify account.
