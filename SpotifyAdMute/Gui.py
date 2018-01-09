@@ -126,7 +126,7 @@ class Job(threading.Thread):
 class App(object):
     requests = Queue.Queue()  # Let other threads create widgets by submitting requests
 
-    version = '1.0.7'
+    version = '1.0.8'
     run_thread = None
     username = None
     running_ad_mute = False
