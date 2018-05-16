@@ -1,6 +1,6 @@
 # Spotify Ad Mute
 ## Description
-Spotify Ad Mute is a simple Spotify listener that mutes ads.
+Spotify Ad Mute is a simple Spotify listener that mutes ads... for those of us without Spotify Premium :).  
 
 ## Quickstart
 To run, download the repo and run the .exe in the distribution folder  
